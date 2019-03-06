@@ -2,7 +2,7 @@ package models
 
 import (
 	"github.com/advancedlogic/goms/pkg/interfaces"
-	"github.com/advancedlogic/goms/pkg/rest"
+	"github.com/advancedlogic/goms/pkg/modules"
 )
 
 type Microservice struct {
@@ -10,8 +10,8 @@ type Microservice struct {
 	Sync          interfaces.Sync
 }
 
-func NewMicroservice() (*Microservice, error) {
-	r, err := rest.NewBuilder().Port(900).Build()
+func NewMicroservice(environment *modules.Environment) (*Microservice, error) {
+	r, err := modules.NewRestBuilder(environment).WithPort(9000).Build()
 	if err != nil {
 		return nil, err
 	}
