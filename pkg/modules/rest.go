@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"github.com/toorop/gin-logrus"
 
 	"net/http"
@@ -21,10 +22,11 @@ type Rest struct {
 	postHandlers   map[string][]gin.HandlerFunc
 	putHandlers    map[string][]gin.HandlerFunc
 	deleteHandlers map[string][]gin.HandlerFunc
-	middlewares    []func(ctx *gin.Context)
+	middleware     []func(ctx *gin.Context)
 	websiteFolder  map[string]string
 	cert           string
 	key            string
+	logger         *logrus.Logger
 	server         *http.Server
 }
 
@@ -45,8 +47,9 @@ func NewRestBuilder(environment *Environment) *RestBuilder {
 			postHandlers:   make(map[string][]gin.HandlerFunc),
 			putHandlers:    make(map[string][]gin.HandlerFunc),
 			deleteHandlers: make(map[string][]gin.HandlerFunc),
-			middlewares:    make([]func(ctx *gin.Context), 0),
+			middleware:     make([]func(ctx *gin.Context), 0),
 			websiteFolder:  make(map[string]string),
+			logger:         environment.log,
 		},
 	}
 }
@@ -99,7 +102,7 @@ func (rb *RestBuilder) WithDeleteHandler(path string, handler func(ctx *gin.Cont
 }
 
 func (rb *RestBuilder) WithMiddleware(middleware func(ctx *gin.Context)) *RestBuilder {
-	rb.middlewares = append(rb.middlewares, middleware)
+	rb.middleware = append(rb.middleware, middleware)
 	return rb
 }
 
@@ -123,9 +126,9 @@ func (rb *RestBuilder) Build() (*Rest, error) {
 
 func (r *Rest) Run(opts ...string) error {
 	router := gin.New()
-	router.Use(ginlogrus.Logger(log), gin.Recovery())
+	router.Use(ginlogrus.Logger(r.logger), gin.Recovery())
 
-	for _, middleware := range r.middlewares {
+	for _, middleware := range r.middleware {
 		router.Use(gin.HandlerFunc(middleware))
 	}
 
