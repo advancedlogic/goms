@@ -1,5 +1,5 @@
 package interfaces
 
-type Sync interface {
+type Transport interface {
 	Run(...string) error
 }

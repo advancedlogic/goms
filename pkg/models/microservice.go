@@ -6,16 +6,17 @@ import (
 )
 
 type Microservice struct {
-	Configuration interfaces.Configuration
-	Sync          interfaces.Sync
+	environment interfaces.Configuration
+	transport   interfaces.Transport
 }
 
 func NewMicroservice(environment *modules.Environment) (*Microservice, error) {
-	r, err := modules.NewRestBuilder(environment).WithPort(9000).Build()
+	port := environment.GetIntOrDefault("transport.port", 8080)
+	r, err := modules.NewRestBuilder(environment).WithPort(port).Build()
 	if err != nil {
 		return nil, err
 	}
 	return &Microservice{
-		Sync: r,
+		transport: r,
 	}, nil
 }
