@@ -1,11 +1,13 @@
 package modules
 
 import (
+	"errors"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/x-cray/logrus-prefixed-formatter"
+	"strings"
 	"time"
 )
 
@@ -16,6 +18,7 @@ type Environment struct {
 	uri      string
 	name     string
 	log      *logrus.Logger
+	remote   bool
 }
 
 type EnvironmentBuilder struct {
@@ -34,17 +37,42 @@ func (eb *EnvironmentBuilder) WithName(name string) *EnvironmentBuilder {
 }
 
 func (eb *EnvironmentBuilder) WithRemoteConfiguration(provider, uri string) *EnvironmentBuilder {
+	eb.remote = true
 	eb.provider = provider
 	eb.uri = uri
 	return eb
 }
 
-func (eb *EnvironmentBuilder) WithConfig(config string) *EnvironmentBuilder {
+func (eb *EnvironmentBuilder) WithConfigurationFile(config string) *EnvironmentBuilder {
+	eb.remote = false
 	eb.config = config
 	return eb
 }
 
+func (eb *EnvironmentBuilder) verifyConfig() error {
+	stack := make([]string, 0)
+	if eb.name == "" {
+		stack = append(stack, "name cannot be empty")
+	}
+
+	if eb.config == "" {
+		stack = append(stack, "a configuration file must be provided")
+	}
+
+	if (eb.provider == "" || eb.uri == "") && eb.remote {
+		stack = append(stack, "provider and uri cannot be empty")
+	}
+
+	if len(stack) > 0 {
+		return errors.New(strings.Join(stack, "\n"))
+	}
+	return nil
+}
+
 func (eb *EnvironmentBuilder) Build() (*Environment, error) {
+	if err := eb.verifyConfig(); err != nil {
+		return nil, err
+	}
 	log := logrus.New()
 	formatter := new(prefixed.TextFormatter)
 	formatter.FullTimestamp = true
