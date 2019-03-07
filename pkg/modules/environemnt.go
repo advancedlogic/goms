@@ -45,16 +45,19 @@ func (eb *EnvironmentBuilder) WithConfig(config string) *EnvironmentBuilder {
 
 func (eb *EnvironmentBuilder) Build() (*Environment, error) {
 	v := viper.New()
+	v.SetConfigType("json")
 
 	if eb.provider != "" && eb.uri != "" {
 		if err := v.AddRemoteProvider(eb.provider, eb.uri, eb.name); err != nil {
 			return nil, err
 		}
+		if err := v.ReadRemoteConfig(); err != nil {
+			return nil, err
+		}
 	} else {
-		//v.SetConfigName(eb.config)
-		v.SetConfigType("json")
-		v.AddConfigPath(fmt.Sprintf("/etc/%s", eb.config))
-		v.AddConfigPath(fmt.Sprintf("$HOME/.%s", eb.config))
+		v.SetConfigName(eb.config)
+		v.AddConfigPath(fmt.Sprintf("/etc/%s", eb.name))
+		v.AddConfigPath(fmt.Sprintf("$HOME/.%s", eb.name))
 		v.AddConfigPath(".")
 		if err := v.ReadInConfig(); err != nil {
 			return nil, err
