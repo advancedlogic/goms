@@ -5,6 +5,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"github.com/x-cray/logrus-prefixed-formatter"
 	"time"
 )
 
@@ -44,10 +45,16 @@ func (eb *EnvironmentBuilder) WithConfig(config string) *EnvironmentBuilder {
 }
 
 func (eb *EnvironmentBuilder) Build() (*Environment, error) {
+	log := logrus.New()
+	formatter := new(prefixed.TextFormatter)
+	formatter.FullTimestamp = true
+	log.Formatter = formatter
+
 	v := viper.New()
-	v.SetConfigType("json")
+	v.SetConfigName(eb.config)
 
 	if eb.provider != "" && eb.uri != "" {
+		log.Infof("Configuration %s -> %s", eb.provider, eb.uri)
 		if err := v.AddRemoteProvider(eb.provider, eb.uri, eb.name); err != nil {
 			return nil, err
 		}
@@ -55,30 +62,23 @@ func (eb *EnvironmentBuilder) Build() (*Environment, error) {
 			return nil, err
 		}
 	} else {
-		v.SetConfigName(eb.config)
-		v.AddConfigPath(fmt.Sprintf("/etc/%s", eb.name))
+		log.Infof("Configuration %s", eb.config)
+		v.AddConfigPath(fmt.Sprintf("/etc/%s/", eb.name))
 		v.AddConfigPath(fmt.Sprintf("$HOME/.%s", eb.name))
 		v.AddConfigPath(".")
 		if err := v.ReadInConfig(); err != nil {
 			return nil, err
 		}
-
-	}
-
-	v.WatchConfig()
-	viper.OnConfigChange(func(in fsnotify.Event) {
-		err := viper.ReadInConfig()
-		if err != nil {
-			return
-		}
-	})
-	err := viper.ReadInConfig()
-	if err != nil {
-		return nil, err
+		v.WatchConfig()
+		v.OnConfigChange(func(in fsnotify.Event) {
+			err := v.ReadInConfig()
+			if err != nil {
+				return
+			}
+		})
 	}
 
 	env := eb.Environment
-	log := logrus.New()
 	logLevel := env.GetStringOrDefault("log.level", "info")
 	switch logLevel {
 	case "debug":
@@ -92,12 +92,9 @@ func (eb *EnvironmentBuilder) Build() (*Environment, error) {
 	default:
 		log.Level = logrus.InfoLevel
 	}
-	formatter := new(logrus.TextFormatter)
 	if timestamp := env.GetStringOrDefault("log.timestamp", ""); timestamp != "" {
 		formatter.TimestampFormat = timestamp
 	}
-	formatter.FullTimestamp = true
-	log.Formatter = formatter
 	env.log = log
 
 	return env, nil
