@@ -6,7 +6,7 @@ import (
 )
 
 type Microservice struct {
-	environment interfaces.Configuration
+	environment *modules.Environment
 	transport   interfaces.Transport
 }
 

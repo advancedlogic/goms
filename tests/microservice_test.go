@@ -8,7 +8,7 @@ import (
 )
 
 func TestMicroservice(t *testing.T) {
-	env, err := modules.NewEnvironment("config.json")
+	env, err := modules.NewEnvironmentBuilder().WithConfig("config.json").Build()
 	Equal(t, err, nil)
 	_, err = NewMicroservice(env)
 	Equal(t, err, nil)

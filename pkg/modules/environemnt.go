@@ -10,26 +10,59 @@ import (
 
 type Environment struct {
 	viper.Viper
+	config   string
 	provider string
+	uri      string
 	name     string
 	log      *logrus.Logger
 }
 
-func NewEnvironment(provider, name string) (*Environment, error) {
-	env := &Environment{
-		name: name,
+type EnvironmentBuilder struct {
+	*Environment
+}
+
+func NewEnvironmentBuilder() *EnvironmentBuilder {
+	return &EnvironmentBuilder{
+		Environment: &Environment{},
+	}
+}
+
+func (eb *EnvironmentBuilder) WithName(name string) *EnvironmentBuilder {
+	eb.name = name
+	return eb
+}
+
+func (eb *EnvironmentBuilder) WithRemoteConfiguration(provider, uri string) *EnvironmentBuilder {
+	eb.provider = provider
+	eb.uri = uri
+	return eb
+}
+
+func (eb *EnvironmentBuilder) WithConfig(config string) *EnvironmentBuilder {
+	eb.config = config
+	return eb
+}
+
+func (eb *EnvironmentBuilder) Build() (*Environment, error) {
+	v := viper.New()
+
+	if eb.provider != "" && eb.uri != "" {
+		if err := v.AddRemoteProvider(eb.provider, eb.uri, eb.name); err != nil {
+			return nil, err
+		}
+	} else {
+		//v.SetConfigName(eb.config)
+		v.SetConfigType("json")
+		v.AddConfigPath(fmt.Sprintf("/etc/%s", eb.config))
+		v.AddConfigPath(fmt.Sprintf("$HOME/.%s", eb.config))
+		v.AddConfigPath(".")
+		if err := v.ReadInConfig(); err != nil {
+			return nil, err
+		}
+
 	}
 
-	switch provider {
-	case "local":
-
-	}
-
-	viper.SetConfigName("config")
-	viper.AddConfigPath(fmt.Sprintf("/etc/%s", name))
-	viper.AddConfigPath(fmt.Sprintf("$HOME/.%s", name))
-	viper.AddConfigPath(".")
-	viper.WatchConfig()
+	v.WatchConfig()
 	viper.OnConfigChange(func(in fsnotify.Event) {
 		err := viper.ReadInConfig()
 		if err != nil {
@@ -41,6 +74,7 @@ func NewEnvironment(provider, name string) (*Environment, error) {
 		return nil, err
 	}
 
+	env := eb.Environment
 	log := logrus.New()
 	logLevel := env.GetStringOrDefault("log.level", "info")
 	switch logLevel {
