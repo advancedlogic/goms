@@ -23,11 +23,13 @@ type Environment struct {
 
 type EnvironmentBuilder struct {
 	*Environment
+	errors []error
 }
 
 func NewEnvironmentBuilder() *EnvironmentBuilder {
 	return &EnvironmentBuilder{
 		Environment: &Environment{},
+		errors:      make([]error, 0),
 	}
 }
 
@@ -125,6 +127,10 @@ func (eb *EnvironmentBuilder) Build() (*Environment, error) {
 	}
 	env.log = log
 
+	err := env.CheckErrors(eb.errors)
+	if err != nil {
+		return nil, err
+	}
 	return env, nil
 }
 
@@ -161,4 +167,17 @@ func (e *Environment) GetStringOrDefault(path string, defaultValue string) strin
 		return value
 	}
 	return defaultValue
+}
+
+func (e *Environment) CheckErrors(errs []error) error {
+	if len(errs) == 0 {
+		return nil
+	}
+	msg := ""
+	for _, err := range errs {
+		msg += fmt.Sprintf("%s\n", err.Error())
+	}
+
+	return errors.New(msg)
+
 }

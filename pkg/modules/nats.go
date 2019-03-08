@@ -1,6 +1,9 @@
 package modules
 
-import "github.com/nats-io/go-nats"
+import (
+	"errors"
+	"github.com/nats-io/go-nats"
+)
 
 type Nats struct {
 	endpoint            string
@@ -13,16 +16,21 @@ type Nats struct {
 type NatsBuilder struct {
 	*Environment
 	*Nats
+	errors []error
 }
 
 func NewNatsBuilder(environment *Environment) *NatsBuilder {
 	return &NatsBuilder{
 		Environment: environment,
 		Nats:        &Nats{},
+		errors:      make([]error, 0),
 	}
 }
 
 func (nb *NatsBuilder) WithEndpoint(endpoint string) *NatsBuilder {
+	if endpoint == "" {
+		nb.errors = append(nb.errors, errors.New("endpoint cannot be empty"))
+	}
 	nb.endpoint = endpoint
 	return nb
 }
@@ -32,8 +40,12 @@ func (nb *NatsBuilder) WithUserCredentialsPath(path string) *NatsBuilder {
 	return nb
 }
 
-func (nb *NatsBuilder) Build() *Nats {
-	return nb.Nats
+func (nb *NatsBuilder) Build() (*Nats, error) {
+	err := nb.CheckErrors(nb.errors)
+	if err != nil {
+		return nil, err
+	}
+	return nb.Nats, nil
 }
 
 func (n *Nats) Connect() error {

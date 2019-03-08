@@ -34,6 +34,7 @@ type Rest struct {
 type RestBuilder struct {
 	*Environment
 	*Rest
+	errors []error
 }
 
 func NewRestBuilder(environment *Environment) *RestBuilder {
@@ -51,10 +52,14 @@ func NewRestBuilder(environment *Environment) *RestBuilder {
 			websiteFolder:  make(map[string]string),
 			logger:         environment.log,
 		},
+		errors: make([]error, 0),
 	}
 }
 
 func (rb *RestBuilder) WithPort(port int) *RestBuilder {
+	if port == 0 {
+		rb.errors = append(rb.errors, errors.New("port must be greater than zero"))
+	}
 	rb.port = port
 	return rb
 }
@@ -70,6 +75,9 @@ func (rb *RestBuilder) WithWriteTimeout(duration time.Duration) *RestBuilder {
 }
 
 func (rb *RestBuilder) WithGetHandler(path string, handler func(ctx *gin.Context)) *RestBuilder {
+	if path == "" {
+		rb.errors = append(rb.errors, errors.New("path cannot be empty"))
+	}
 	if _, exists := rb.getHandlers[path]; !exists {
 		rb.getHandlers[path] = make([]gin.HandlerFunc, 0)
 	}
@@ -78,6 +86,9 @@ func (rb *RestBuilder) WithGetHandler(path string, handler func(ctx *gin.Context
 }
 
 func (rb *RestBuilder) WithPostHandler(path string, handler func(ctx *gin.Context)) *RestBuilder {
+	if path == "" {
+		rb.errors = append(rb.errors, errors.New("path cannot be empty"))
+	}
 	if _, exists := rb.postHandlers[path]; !exists {
 		rb.postHandlers[path] = make([]gin.HandlerFunc, 0)
 	}
@@ -86,6 +97,9 @@ func (rb *RestBuilder) WithPostHandler(path string, handler func(ctx *gin.Contex
 }
 
 func (rb *RestBuilder) WithPutHandler(path string, handler func(ctx *gin.Context)) *RestBuilder {
+	if path == "" {
+		rb.errors = append(rb.errors, errors.New("path cannot be empty"))
+	}
 	if _, exists := rb.putHandlers[path]; !exists {
 		rb.putHandlers[path] = make([]gin.HandlerFunc, 0)
 	}
@@ -94,6 +108,9 @@ func (rb *RestBuilder) WithPutHandler(path string, handler func(ctx *gin.Context
 }
 
 func (rb *RestBuilder) WithDeleteHandler(path string, handler func(ctx *gin.Context)) *RestBuilder {
+	if path == "" {
+		rb.errors = append(rb.errors, errors.New("path cannot be empty"))
+	}
 	if _, exists := rb.deleteHandlers[path]; !exists {
 		rb.deleteHandlers[path] = make([]gin.HandlerFunc, 0)
 	}
@@ -112,12 +129,19 @@ func (rb *RestBuilder) WithStaticFilesFolder(uri, folder string) *RestBuilder {
 }
 
 func (rb *RestBuilder) WithTLS(pem, key string) *RestBuilder {
+	if pem == "" && key == "" {
+		rb.errors = append(rb.errors, errors.New("certificate or key cannot be empty"))
+	}
 	rb.cert = pem
 	rb.key = key
 	return rb
 }
 
 func (rb *RestBuilder) Build() (*Rest, error) {
+	err := rb.CheckErrors(rb.errors)
+	if err != nil {
+		return nil, err
+	}
 	if rb.Rest != nil {
 		return rb.Rest, nil
 	}
