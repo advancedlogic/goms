@@ -1,8 +1,8 @@
 package modules
 
 import (
-	"errors"
 	"github.com/nats-io/go-nats"
+	"github.com/sirupsen/logrus"
 )
 
 type Nats struct {
@@ -11,31 +11,36 @@ type Nats struct {
 	userCredentialsPath string
 	userJWT             string
 	userNK              string
+	logger              *logrus.Logger
 }
 
 type NatsBuilder struct {
 	*Environment
 	*Nats
-	errors []error
+	Exception
 }
 
 func NewNatsBuilder(environment *Environment) *NatsBuilder {
 	return &NatsBuilder{
 		Environment: environment,
-		Nats:        &Nats{},
-		errors:      make([]error, 0),
+		Nats: &Nats{
+			logger: environment.Logger,
+		},
 	}
 }
 
 func (nb *NatsBuilder) WithEndpoint(endpoint string) *NatsBuilder {
 	if endpoint == "" {
-		nb.errors = append(nb.errors, errors.New("endpoint cannot be empty"))
+		nb.Catch("endpoint cannot be empty")
 	}
 	nb.endpoint = endpoint
 	return nb
 }
 
 func (nb *NatsBuilder) WithUserCredentialsPath(path string) *NatsBuilder {
+	if path == "" {
+		nb.Catch("user credentials path cannot be empty")
+	}
 	nb.userCredentialsPath = path
 	return nb
 }
@@ -48,9 +53,9 @@ func (nb *NatsBuilder) Build() (*Nats, error) {
 	return nb.Nats, nil
 }
 
-func (n *Nats) Connect() error {
+func (n *Nats) Connect(endpoint string) error {
 	var err error
-	if conn, err := nats.Connect(n.endpoint); err == nil {
+	if conn, err := nats.Connect(endpoint); err == nil {
 		n.conn = conn
 		return nil
 	}

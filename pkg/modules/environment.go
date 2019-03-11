@@ -17,8 +17,8 @@ type Environment struct {
 	provider string
 	uri      string
 	name     string
-	log      *logrus.Logger
-	remote   bool
+	*logrus.Logger
+	remote bool
 }
 
 type EnvironmentBuilder struct {
@@ -28,8 +28,10 @@ type EnvironmentBuilder struct {
 
 func NewEnvironmentBuilder() *EnvironmentBuilder {
 	return &EnvironmentBuilder{
-		Environment: &Environment{},
-		errors:      make([]error, 0),
+		Environment: &Environment{
+			Logger: logrus.New(),
+		},
+		errors: make([]error, 0),
 	}
 }
 
@@ -75,16 +77,16 @@ func (eb *EnvironmentBuilder) Build() (*Environment, error) {
 	if err := eb.verifyConfig(); err != nil {
 		return nil, err
 	}
-	log := logrus.New()
+	env := eb.Environment
 	formatter := new(prefixed.TextFormatter)
 	formatter.FullTimestamp = true
-	log.Formatter = formatter
+	env.Formatter = formatter
 
 	v := viper.New()
 	v.SetConfigName(eb.config)
 
 	if eb.provider != "" && eb.uri != "" {
-		log.Infof("Configuration %s -> %s", eb.provider, eb.uri)
+		env.Infof("Configuration %s -> %s", eb.provider, eb.uri)
 		if err := v.AddRemoteProvider(eb.provider, eb.uri, eb.name); err != nil {
 			return nil, err
 		}
@@ -92,7 +94,7 @@ func (eb *EnvironmentBuilder) Build() (*Environment, error) {
 			return nil, err
 		}
 	} else {
-		log.Infof("Configuration %s", eb.config)
+		env.Infof("Configuration %s", eb.config)
 		v.AddConfigPath(fmt.Sprintf("/etc/%s/", eb.name))
 		v.AddConfigPath(fmt.Sprintf("$HOME/.%s", eb.name))
 		v.AddConfigPath(".")
@@ -108,24 +110,22 @@ func (eb *EnvironmentBuilder) Build() (*Environment, error) {
 		})
 	}
 
-	env := eb.Environment
 	logLevel := env.GetStringOrDefault("log.level", "info")
 	switch logLevel {
 	case "debug":
-		log.Level = logrus.DebugLevel
+		env.Level = logrus.DebugLevel
 	case "info":
-		log.Level = logrus.InfoLevel
+		env.Level = logrus.InfoLevel
 	case "warn":
-		log.Level = logrus.WarnLevel
+		env.Level = logrus.WarnLevel
 	case "error":
-		log.Level = logrus.ErrorLevel
+		env.Level = logrus.ErrorLevel
 	default:
-		log.Level = logrus.InfoLevel
+		env.Level = logrus.InfoLevel
 	}
 	if timestamp := env.GetStringOrDefault("log.timestamp", ""); timestamp != "" {
 		formatter.TimestampFormat = timestamp
 	}
-	env.log = log
 
 	err := env.CheckErrors(eb.errors)
 	if err != nil {
@@ -169,15 +169,9 @@ func (e *Environment) GetStringOrDefault(path string, defaultValue string) strin
 	return defaultValue
 }
 
-func (e *Environment) CheckErrors(errs []error) error {
-	if len(errs) == 0 {
+func (e *Environment) CheckErrors(errors []error) error {
+	if len(errors) == 0 {
 		return nil
 	}
-	msg := ""
-	for _, err := range errs {
-		msg += fmt.Sprintf("%s\n", err.Error())
-	}
-
-	return errors.New(msg)
-
+	return errors[0]
 }

@@ -1,0 +1,9 @@
+{
+  "log": {
+    "level" : "info",
+    "timestamp" : ""
+  },
+  "transport" : {
+    "port" : 8080
+  }
+}

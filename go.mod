@@ -2,11 +2,13 @@ module github.com/advancedlogic/goms
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/ankit-arora/go-utils v0.0.0-20170709111640-7f375a7a7b81
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gin-contrib/sse v0.0.0-20190301062529-5545eab6dad3 // indirect
 	github.com/gin-gonic/gin v1.3.0
 	github.com/golang/protobuf v1.3.0 // indirect
-	github.com/hashicorp/consul v1.4.3 // indirect
+	github.com/google/uuid v1.1.1
+	github.com/hashicorp/consul v1.4.3
 	github.com/hashicorp/go-cleanhttp v0.5.0 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.0 // indirect
 	github.com/hashicorp/serf v0.8.2 // indirect

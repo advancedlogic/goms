@@ -1,7 +1,6 @@
 package modules
 
 import (
-	"errors"
 	"fmt"
 	consulapi "github.com/hashicorp/consul/api"
 	"log"
@@ -15,20 +14,20 @@ type ConsulRegistry struct {
 }
 
 type ConsulRegistryBuilder struct {
+	*Environment
 	*ConsulRegistry
-	errors []error
+	Exception
 }
 
-func NewConsulRegistryBuilder() *ConsulRegistryBuilder {
+func NewConsulRegistryBuilder(environment *Environment) *ConsulRegistryBuilder {
 	return &ConsulRegistryBuilder{
 		ConsulRegistry: &ConsulRegistry{},
-		errors:         make([]error, 0),
 	}
 }
 
 func (crb *ConsulRegistryBuilder) WithID(id string) *ConsulRegistryBuilder {
 	if id == "" {
-		crb.errors = append(crb.errors, errors.New("id cannot be empty"))
+		crb.Catch("id cannot be empty")
 	}
 	crb.id = id
 	return crb
@@ -36,28 +35,25 @@ func (crb *ConsulRegistryBuilder) WithID(id string) *ConsulRegistryBuilder {
 
 func (crb *ConsulRegistryBuilder) WithName(name string) *ConsulRegistryBuilder {
 	if name == "" {
-		crb.errors = append(crb.errors, errors.New("name cannot be empty"))
+		crb.Catch("name cannot be empty")
 	}
-	crb.name = name
+	crb.ConsulRegistry.name = name
 	return crb
 }
 
 func (crb *ConsulRegistryBuilder) WithHealthCheckingPort(port int) *ConsulRegistryBuilder {
 	if port == 0 {
-		crb.errors = append(crb.errors, errors.New("port must be greater than 0"))
+		crb.Catch("port must be greater than 0")
 	}
 	crb.port = port
 	return crb
 }
 
 func (crb *ConsulRegistryBuilder) Build() (*ConsulRegistry, error) {
-	if len(crb.errors) > 0 {
-		msg := ""
-		for _, err := range crb.errors {
-			msg = msg + fmt.Sprintf("%s\n", err.Error())
-		}
-		return nil, errors.New(msg)
+	if err := crb.CheckErrors(crb.errors); err != nil {
+		return nil, err
 	}
+
 	return crb.ConsulRegistry, nil
 }
 

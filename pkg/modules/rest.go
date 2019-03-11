@@ -34,49 +34,54 @@ type Rest struct {
 type RestBuilder struct {
 	*Environment
 	*Rest
-	errors []error
+	Exception
 }
 
 func NewRestBuilder(environment *Environment) *RestBuilder {
 	return &RestBuilder{
 		Environment: environment,
 		Rest: &Rest{
-			port:           8080,
-			readTimeout:    10 * time.Second,
-			writeTimeout:   10 * time.Second,
+			port:           environment.GetIntOrDefault("transport.port", 8080),
+			readTimeout:    environment.GetDurationOrDefault("transport.readTimeout", 10) * time.Second,
+			writeTimeout:   environment.GetDurationOrDefault("transport.writeTimeout", 10) * time.Second,
 			getHandlers:    make(map[string][]gin.HandlerFunc),
 			postHandlers:   make(map[string][]gin.HandlerFunc),
 			putHandlers:    make(map[string][]gin.HandlerFunc),
 			deleteHandlers: make(map[string][]gin.HandlerFunc),
 			middleware:     make([]func(ctx *gin.Context), 0),
 			websiteFolder:  make(map[string]string),
-			logger:         environment.log,
+			logger:         environment.Logger,
 		},
-		errors: make([]error, 0),
 	}
 }
 
 func (rb *RestBuilder) WithPort(port int) *RestBuilder {
 	if port == 0 {
-		rb.errors = append(rb.errors, errors.New("port must be greater than zero"))
+		rb.Catch("port must be greater than zero")
 	}
 	rb.port = port
 	return rb
 }
 
 func (rb *RestBuilder) WithReadTimeout(duration time.Duration) *RestBuilder {
+	if duration == 0 {
+		rb.Catch("read timeout cannot be zero")
+	}
 	rb.readTimeout = duration
 	return rb
 }
 
 func (rb *RestBuilder) WithWriteTimeout(duration time.Duration) *RestBuilder {
+	if duration == 0 {
+		rb.Catch("read timeout cannot be zero")
+	}
 	rb.writeTimeout = duration
 	return rb
 }
 
 func (rb *RestBuilder) WithGetHandler(path string, handler func(ctx *gin.Context)) *RestBuilder {
 	if path == "" {
-		rb.errors = append(rb.errors, errors.New("path cannot be empty"))
+		rb.Catch("path cannot be empty")
 	}
 	if _, exists := rb.getHandlers[path]; !exists {
 		rb.getHandlers[path] = make([]gin.HandlerFunc, 0)
@@ -87,7 +92,7 @@ func (rb *RestBuilder) WithGetHandler(path string, handler func(ctx *gin.Context
 
 func (rb *RestBuilder) WithPostHandler(path string, handler func(ctx *gin.Context)) *RestBuilder {
 	if path == "" {
-		rb.errors = append(rb.errors, errors.New("path cannot be empty"))
+		rb.Catch("path cannot be empty")
 	}
 	if _, exists := rb.postHandlers[path]; !exists {
 		rb.postHandlers[path] = make([]gin.HandlerFunc, 0)
@@ -98,7 +103,7 @@ func (rb *RestBuilder) WithPostHandler(path string, handler func(ctx *gin.Contex
 
 func (rb *RestBuilder) WithPutHandler(path string, handler func(ctx *gin.Context)) *RestBuilder {
 	if path == "" {
-		rb.errors = append(rb.errors, errors.New("path cannot be empty"))
+		rb.Catch("path cannot be empty")
 	}
 	if _, exists := rb.putHandlers[path]; !exists {
 		rb.putHandlers[path] = make([]gin.HandlerFunc, 0)
@@ -109,7 +114,7 @@ func (rb *RestBuilder) WithPutHandler(path string, handler func(ctx *gin.Context
 
 func (rb *RestBuilder) WithDeleteHandler(path string, handler func(ctx *gin.Context)) *RestBuilder {
 	if path == "" {
-		rb.errors = append(rb.errors, errors.New("path cannot be empty"))
+		rb.Catch("path cannot be empty")
 	}
 	if _, exists := rb.deleteHandlers[path]; !exists {
 		rb.deleteHandlers[path] = make([]gin.HandlerFunc, 0)
@@ -130,7 +135,7 @@ func (rb *RestBuilder) WithStaticFilesFolder(uri, folder string) *RestBuilder {
 
 func (rb *RestBuilder) WithTLS(pem, key string) *RestBuilder {
 	if pem == "" && key == "" {
-		rb.errors = append(rb.errors, errors.New("certificate or key cannot be empty"))
+		rb.Catch("certificate or key cannot be empty")
 	}
 	rb.cert = pem
 	rb.key = key
@@ -138,8 +143,7 @@ func (rb *RestBuilder) WithTLS(pem, key string) *RestBuilder {
 }
 
 func (rb *RestBuilder) Build() (*Rest, error) {
-	err := rb.CheckErrors(rb.errors)
-	if err != nil {
+	if err := rb.CheckErrors(rb.errors); err != nil {
 		return nil, err
 	}
 	if rb.Rest != nil {
@@ -148,9 +152,40 @@ func (rb *RestBuilder) Build() (*Rest, error) {
 	return nil, errors.New("")
 }
 
+func (r *Rest) GetHandler(endpoint string, handler interface{}) {
+	if _, exists := r.getHandlers[endpoint]; !exists {
+		r.getHandlers[endpoint] = make([]gin.HandlerFunc, 0)
+	}
+	r.getHandlers[endpoint] = append(r.getHandlers[endpoint], gin.HandlerFunc(handler.(func(*gin.Context))))
+}
+
+func (r *Rest) PostHandler(endpoint string, handler interface{}) {
+	if _, exists := r.postHandlers[endpoint]; !exists {
+		r.postHandlers[endpoint] = make([]gin.HandlerFunc, 0)
+	}
+	r.postHandlers[endpoint] = append(r.postHandlers[endpoint], gin.HandlerFunc(handler.(func(ctx *gin.Context))))
+}
+
+func (r *Rest) PutHandler(endpoint string, handler interface{}) {
+	if _, exists := r.putHandlers[endpoint]; !exists {
+		r.putHandlers[endpoint] = make([]gin.HandlerFunc, 0)
+	}
+	r.putHandlers[endpoint] = append(r.putHandlers[endpoint], gin.HandlerFunc(handler.(func(ctx *gin.Context))))
+}
+
+func (r *Rest) DeleteHandler(endpoint string, handler interface{}) {
+	if _, exists := r.deleteHandlers[endpoint]; !exists {
+		r.deleteHandlers[endpoint] = make([]gin.HandlerFunc, 0)
+	}
+	r.deleteHandlers[endpoint] = append(r.deleteHandlers[endpoint], gin.HandlerFunc(handler.(func(ctx *gin.Context))))
+}
+
 func (r *Rest) Run(opts ...string) error {
 	router := gin.New()
 	router.Use(ginlogrus.Logger(r.logger), gin.Recovery())
+	router.GET("/healthcheck", func(c *gin.Context) {
+		c.String(200, "product service is good")
+	})
 
 	for _, middleware := range r.middleware {
 		router.Use(gin.HandlerFunc(middleware))
