@@ -3,7 +3,14 @@
     "level" : "info",
     "timestamp" : ""
   },
-  "transport" : {
-    "port" : 8080
+  "service" : {
+    "port" : 8080,
+    "mode" : "debug"
+  },
+  "store" : {
+    "bucket" : "test",
+    "endpoint" : "127.0.0.1:9000 ",
+    "accessKey" : "UHW54GE01Z47THBOLC4X",
+    "secretKey" : "AIARE2SWHObFErWHQ5HXrxJaPXSJ6ypgpmwF4Gkg"
   }
 }

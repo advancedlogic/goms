@@ -8,23 +8,26 @@ import (
 	"github.com/google/uuid"
 	"github.com/nats-io/go-nats"
 	"github.com/sirupsen/logrus"
+	"log"
 )
 
 type Microservice struct {
-	*modules.Environment
+	*Environment
 	mid       string
 	transport interfaces.Transport
 	discovery interfaces.Registry
 	broker    interfaces.Broker
 	module    interfaces.Processor
+	store     interfaces.Store
+	cache     interfaces.Cache
 }
 
 type MicroserviceBuilder struct {
 	*Microservice
-	modules.Exception
+	Exception
 }
 
-func NewMicroserviceBuilder(environment *modules.Environment) *MicroserviceBuilder {
+func NewMicroserviceBuilder(environment *Environment) *MicroserviceBuilder {
 	mid, err := uuid.NewUUID()
 	if err != nil {
 		environment.Fatal(err)
@@ -35,6 +38,25 @@ func NewMicroserviceBuilder(environment *modules.Environment) *MicroserviceBuild
 			Environment: environment,
 		},
 	}
+}
+
+func (mb *MicroserviceBuilder) Default() *MicroserviceBuilder {
+	r, err := modules.NewRestBuilder(mb.Environment).Build()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	d, err := modules.NewConsulRegistryBuilder(mb.Environment).Build()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	b, err := modules.NewNatsBuilder(mb.Environment).Build()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return mb.WithTransport(r).WithDiscovery(d).WithBroker(b)
 }
 
 func (mb *MicroserviceBuilder) WithTransport(transport interfaces.Transport) *MicroserviceBuilder {
@@ -60,6 +82,16 @@ func (mb *MicroserviceBuilder) WithBroker(broker interfaces.Broker) *Microservic
 	return mb
 }
 
+func (mb *MicroserviceBuilder) WithStore(store interfaces.Store) *MicroserviceBuilder {
+	mb.store = store
+	return mb
+}
+
+func (mb *MicroserviceBuilder) WithCache(cache interfaces.Cache) *MicroserviceBuilder {
+	mb.cache = cache
+	return mb
+}
+
 func (mb *MicroserviceBuilder) Build() (*Microservice, error) {
 	if err := mb.CheckErrors(mb.Errors()); err != nil {
 		return nil, err
@@ -69,6 +101,10 @@ func (mb *MicroserviceBuilder) Build() (*Microservice, error) {
 
 func (m *Microservice) Subscribe(topic string, callback nats.MsgHandler) error {
 	return m.broker.Subscribe(topic, callback)
+}
+
+func (m *Microservice) SubscribeDefault(handler nats.MsgHandler) error {
+	return m.broker.Subscribe(m.mid, handler)
 }
 
 func (m *Microservice) GetHandler(endpoint string, handler interface{}) {
@@ -128,4 +164,16 @@ func (m *Microservice) Run() {
 		}
 	})
 	go_shutdown_hook.Wait()
+}
+
+func (m *Microservice) Close() {
+	if m.broker != nil {
+		m.broker.Close()
+	}
+	if m.transport != nil {
+		err := m.transport.Stop()
+		if err != nil {
+			m.Logger.Fatal(err)
+		}
+	}
 }

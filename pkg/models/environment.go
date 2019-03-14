@@ -1,4 +1,4 @@
-package modules
+package models
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 )
 
 type Environment struct {
-	viper.Viper
+	*viper.Viper
 	config   string
 	provider string
 	uri      string
@@ -98,6 +98,7 @@ func (eb *EnvironmentBuilder) Build() (*Environment, error) {
 		v.AddConfigPath(fmt.Sprintf("/etc/%s/", eb.name))
 		v.AddConfigPath(fmt.Sprintf("$HOME/.%s", eb.name))
 		v.AddConfigPath(".")
+		v.AutomaticEnv()
 		if err := v.ReadInConfig(); err != nil {
 			return nil, err
 		}
@@ -109,6 +110,8 @@ func (eb *EnvironmentBuilder) Build() (*Environment, error) {
 			}
 		})
 	}
+
+	env.Viper = v
 
 	logLevel := env.GetStringOrDefault("log.level", "info")
 	switch logLevel {

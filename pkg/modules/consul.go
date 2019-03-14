@@ -2,6 +2,7 @@ package modules
 
 import (
 	"fmt"
+	. "github.com/advancedlogic/goms/pkg/models"
 	consulapi "github.com/hashicorp/consul/api"
 	"log"
 	"os"
@@ -20,9 +21,13 @@ type ConsulRegistryBuilder struct {
 }
 
 func NewConsulRegistryBuilder(environment *Environment) *ConsulRegistryBuilder {
-	return &ConsulRegistryBuilder{
+	crb := &ConsulRegistryBuilder{
 		ConsulRegistry: &ConsulRegistry{},
+		Environment:    environment,
 	}
+	return crb.WithID(crb.GetStringOrDefault("service.id", "default")).
+		WithName(crb.GetStringOrDefault("service.name", "default")).
+		WithHealthCheckingPort(crb.GetIntOrDefault("service.port", 8080))
 }
 
 func (crb *ConsulRegistryBuilder) WithID(id string) *ConsulRegistryBuilder {

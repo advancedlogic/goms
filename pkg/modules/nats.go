@@ -25,7 +25,7 @@ type NatsBuilder struct {
 }
 
 func NewNatsBuilder(environment *Environment) *NatsBuilder {
-	return &NatsBuilder{
+	nb := &NatsBuilder{
 		Environment: environment,
 		Nats: &Nats{
 			logger:        environment.Logger,
@@ -33,6 +33,7 @@ func NewNatsBuilder(environment *Environment) *NatsBuilder {
 			subscriptions: make(map[string]*nats.Subscription),
 		},
 	}
+	return nb.WithEndpoint(nb.GetStringOrDefault("broker.endpoint", "localhost:4222"))
 }
 
 func (nb *NatsBuilder) WithEndpoint(endpoint string) *NatsBuilder {

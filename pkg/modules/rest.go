@@ -38,7 +38,7 @@ type RestBuilder struct {
 }
 
 func NewRestBuilder(environment *Environment) *RestBuilder {
-	return &RestBuilder{
+	rb := &RestBuilder{
 		Environment: environment,
 		Rest: &Rest{
 			port:           environment.GetIntOrDefault("transport.port", 8080),
@@ -53,6 +53,12 @@ func NewRestBuilder(environment *Environment) *RestBuilder {
 			logger:         environment.Logger,
 		},
 	}
+
+	return rb.
+		WithPort(environment.GetIntOrDefault("service.port", 8080)).
+		WithReadTimeout(environment.GetDurationOrDefault("service.timeout", 10*time.Second)).
+		WithWriteTimeout(environment.GetDurationOrDefault("service.timeout", 10*time.Second))
+
 }
 
 func (rb *RestBuilder) WithPort(port int) *RestBuilder {
@@ -143,6 +149,10 @@ func (rb *RestBuilder) WithTLS(pem, key string) *RestBuilder {
 }
 
 func (rb *RestBuilder) Build() (*Rest, error) {
+	ginMode := rb.GetStringOrDefault("service.mode", "release")
+	if ginMode == "release" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	if err := rb.CheckErrors(rb.errors); err != nil {
 		return nil, err
 	}
@@ -180,7 +190,7 @@ func (r *Rest) DeleteHandler(endpoint string, handler interface{}) {
 	r.deleteHandlers[endpoint] = append(r.deleteHandlers[endpoint], gin.HandlerFunc(handler.(func(ctx *gin.Context))))
 }
 
-func (r *Rest) Run(opts ...string) error {
+func (r *Rest) Run() error {
 	router := gin.New()
 	router.Use(ginlogrus.Logger(r.logger), gin.Recovery())
 	router.GET("/healthcheck", func(c *gin.Context) {
