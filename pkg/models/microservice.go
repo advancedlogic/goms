@@ -6,6 +6,7 @@ import (
 	"github.com/advancedlogic/goms/pkg/modules"
 	"github.com/ankit-arora/go-utils/go-shutdown-hook"
 	"github.com/google/uuid"
+	"github.com/nats-io/go-nats"
 	"github.com/sirupsen/logrus"
 )
 
@@ -15,6 +16,7 @@ type Microservice struct {
 	transport interfaces.Transport
 	discovery interfaces.Registry
 	broker    interfaces.Broker
+	module    interfaces.Processor
 }
 
 type MicroserviceBuilder struct {
@@ -40,19 +42,7 @@ func (mb *MicroserviceBuilder) WithTransport(transport interfaces.Transport) *Mi
 	return mb
 }
 
-func (mb *MicroserviceBuilder) WithRestTransport() *MicroserviceBuilder {
-	transport, err := modules.
-		NewRestBuilder(mb.Environment).
-		WithPort(mb.Environment.GetIntOrDefault("transport.port", 8080)).Build()
-	if err != nil {
-		mb.Fatal(err)
-	}
-
-	mb.transport = transport
-	return mb
-}
-
-func (mb *MicroserviceBuilder) WithSubscription(topic string, callback func(interface{})) *MicroserviceBuilder {
+func (mb *MicroserviceBuilder) WithSubscription(topic string, callback nats.MsgHandler) *MicroserviceBuilder {
 	err := mb.broker.Subscribe(topic, callback)
 	if err != nil {
 		mb.Fatal(err)
@@ -77,7 +67,7 @@ func (mb *MicroserviceBuilder) Build() (*Microservice, error) {
 	return mb.Microservice, nil
 }
 
-func (m *Microservice) Subscribe(topic string, callback func(interface{})) error {
+func (m *Microservice) Subscribe(topic string, callback nats.MsgHandler) error {
 	return m.broker.Subscribe(topic, callback)
 }
 
@@ -97,12 +87,17 @@ func (m *Microservice) DeleteHandler(endpoint string, handler interface{}) {
 	m.transport.DeleteHandler(endpoint, handler)
 }
 
+func (m *Microservice) Process(instance interface{}) error {
+	return m.module.Process(instance)
+}
+
 func (m *Microservice) Transport() interfaces.Transport {
 	return m.transport
 }
 
-func (m *Microservice) RestTransport() *modules.Rest {
-	return m.transport.(*modules.Rest)
+func (mb *MicroserviceBuilder) WithPlugin(processor interfaces.Processor) *MicroserviceBuilder {
+	mb.module = processor
+	return mb
 }
 
 func (m *Microservice) Run() {
@@ -114,13 +109,15 @@ func (m *Microservice) Run() {
 	}
 
 	if m.broker != nil {
-		err := m.broker.Connect(m.GetStringOrDefault("broker.host", "localhost:4222"))
+		err := m.broker.Run()
 		if err != nil {
 			logrus.Error(err)
 		}
-		err = m.broker.Subscribe(m.mid, func(i interface{}) {
+	}
 
-		})
+	err := m.transport.Run()
+	if err != nil {
+		m.Fatal(err)
 	}
 
 	go_shutdown_hook.ADD(func() {
@@ -130,9 +127,5 @@ func (m *Microservice) Run() {
 			m.Fatal(err)
 		}
 	})
-	err := m.transport.Run()
-	if err != nil {
-		m.Fatal(err)
-	}
 	go_shutdown_hook.Wait()
 }
