@@ -1,0 +1,22 @@
+{
+  "log": {
+    "level" : "info",
+    "timestamp" : ""
+  },
+  "service" : {
+    "port" : 8080,
+    "mode" : "debug",
+    "public" : "./www"
+  },
+  "store" : {
+    "location": "default",
+    "bucket": "rss",
+    "endpoint": "127.0.0.1:9000",
+    "accessKey": "9A9O3FQINRD2D6V0JTQ0",
+    "secretKey": "nNmLmjrXJqVeZNUAUTN5UInauiCOz+HhYUFcmMpq"
+  },
+  "rss" : {
+    "folder" : "./sources",
+    "loop" : "1h"
+  }
+}

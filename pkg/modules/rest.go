@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/toorop/gin-logrus"
-
 	"net/http"
 	"time"
 )
@@ -244,16 +243,17 @@ func (r *Rest) Run() error {
 		WriteTimeout:   r.writeTimeout,
 		MaxHeaderBytes: 1 << 20,
 	}
-
-	if r.cert != "" && r.key != "" {
-		if err := s.ListenAndServeTLS(r.cert, r.key); err != nil {
-			return err
-		}
-	} else if err := s.ListenAndServe(); err != nil {
-		return err
-	}
-
 	r.server = s
+	go func() {
+		if r.cert != "" && r.key != "" {
+			if err := s.ListenAndServeTLS(r.cert, r.key); err != nil {
+				r.logger.Fatal(err)
+			}
+
+		} else if err := s.ListenAndServe(); err != nil {
+			r.logger.Fatal(err)
+		}
+	}()
 	return nil
 }
 

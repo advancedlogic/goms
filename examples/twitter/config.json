@@ -10,7 +10,7 @@
   },
   "store" : {
     "location": "default",
-    "bucket": "test",
+    "bucket": "twitter",
     "endpoint": "127.0.0.1:9000",
     "accessKey": "9A9O3FQINRD2D6V0JTQ0",
     "secretKey": "nNmLmjrXJqVeZNUAUTN5UInauiCOz+HhYUFcmMpq"

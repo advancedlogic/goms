@@ -7,10 +7,17 @@ import (
 	"github.com/advancedlogic/goms/pkg/tools"
 	"github.com/mmcdole/gofeed"
 	"io/ioutil"
-	"math/rand"
 	"strings"
 	"time"
 )
+
+type RSSSource struct {
+	ID      string   `json:"id"`
+	Name    string   `json:"name"`
+	Folder  string   `json:"folder, omitempty"`
+	Urls    []string `json:"urls, omitempty"`
+	Timeout int      `json:"timeout"`
+}
 
 type RSS struct {
 	interfaces.Service
@@ -20,8 +27,8 @@ func NewRSS() *RSS {
 	return &RSS{}
 }
 
-func (r *RSS) Reload(descriptor Descriptor) error {
-	files, err := ioutil.ReadDir(descriptor.Folder)
+func (r *RSS) reload(source RSSSource) error {
+	files, err := ioutil.ReadDir(source.Folder)
 	if err != nil {
 		return err
 	}
@@ -29,7 +36,7 @@ func (r *RSS) Reload(descriptor Descriptor) error {
 	for _, file := range files {
 		name := file.Name()
 		if strings.HasSuffix(name, ".rss") {
-			blines, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", descriptor.Folder, file.Name()))
+			blines, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", source.Folder, file.Name()))
 			if err != nil {
 				r.Error(err.Error())
 				continue
@@ -41,16 +48,8 @@ func (r *RSS) Reload(descriptor Descriptor) error {
 		}
 	}
 
-	descriptor.Urls = urls
+	source.Urls = urls
 	return nil
-}
-
-type Descriptor struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`
-	Folder  string   `json:"folder, omitempty"`
-	Urls    []string `json:"urls, omitempty"`
-	Timeout int      `json:"timeout"`
 }
 
 func (r *RSS) Init(service interfaces.Service) error {
@@ -61,11 +60,14 @@ func (r *RSS) Init(service interfaces.Service) error {
 	if folder != "" {
 		loopString := r.Config("rss.loop", "0s").(string)
 		loop := tools.String2Milliseconds(loopString)
-		load := func() (Descriptor, error) {
-			descriptor := Descriptor{}
+		load := func() (RSSSource, error) {
+			source := RSSSource{}
+			source.ID = tools.UUID()
+			source.Folder = folder
+
 			files, err := ioutil.ReadDir(folder)
 			if err != nil {
-				return descriptor, err
+				return source, err
 			}
 			for _, file := range files {
 				b, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", folder, file.Name()))
@@ -76,14 +78,14 @@ func (r *RSS) Init(service interfaces.Service) error {
 				urls := strings.Split(string(b), "\n")
 				for _, url := range urls {
 					url = strings.TrimSpace(url)
-					descriptor.Urls = append(descriptor.Urls, url)
+					source.Urls = append(source.Urls, url)
 				}
 			}
 
-			return descriptor, nil
+			return source, nil
 		}
-		routine := func(descriptor Descriptor) {
-			feeds := r.Download(descriptor)
+		routine := func(source RSSSource) {
+			feeds := r.download(source)
 			for _, feed := range feeds {
 				id := tools.SHA1(feed)
 				r.Infof("[%s] %s", id, feed)
@@ -93,11 +95,11 @@ func (r *RSS) Init(service interfaces.Service) error {
 			}
 		}
 		final := func() {
-			descriptor, err := load()
+			source, err := load()
 			if err != nil {
 				r.Fatal(err.Error())
 			}
-			routine(descriptor)
+			routine(source)
 		}
 		if loop > 0 {
 			go func() {
@@ -118,30 +120,26 @@ func (r *RSS) Init(service interfaces.Service) error {
 func (r *RSS) Close() error { return nil }
 
 func (r *RSS) Process(data interface{}) (interface{}, error) {
-	descriptor := data.(Descriptor)
-	err := r.Reload(descriptor)
+	var source RSSSource
+	switch data.(type) {
+	case RSSSource:
+		source = data.(RSSSource)
+	case string:
+
+	}
+	err := r.reload(source)
 	if err != nil {
 		return nil, err
 	}
-	rss := r.Download(descriptor)
+	rss := r.download(source)
 	return rss, nil
 }
 
-func Shuffle(vals []string) {
-	r := rand.New(rand.NewSource(time.Now().Unix()))
-	for len(vals) > 0 {
-		n := len(vals)
-		randIndex := r.Intn(n)
-		vals[n-1], vals[randIndex] = vals[randIndex], vals[n-1]
-		vals = vals[:n-1]
-	}
-}
-
-func (r *RSS) Download(descriptor Descriptor) []string {
+func (r *RSS) download(source RSSSource) []string {
 	fp := gofeed.NewParser()
-	Shuffle(descriptor.Urls)
+	tools.Shuffle(source.Urls)
 	feeds := make([]string, 0)
-	for _, url := range descriptor.Urls {
+	for _, url := range source.Urls {
 		feed, err := fp.ParseURL(url)
 		if err != nil {
 			r.Error(err.Error())

@@ -57,9 +57,9 @@ func main() {
 
 	microservice.StaticFilesFolder("/static", "./www")
 	microservice.PostHandler("/api/v1/rss/source", func(ctx *gin.Context) {
-		var descriptor plugins.Descriptor
-		if ctx.ShouldBind(&descriptor) == nil {
-			feeds, err := microservice.Process(descriptor)
+		var source plugins.Source
+		if ctx.ShouldBind(&source) == nil {
+			feeds, err := microservice.Process(source)
 			if err != nil {
 				ctx.String(http.StatusBadGateway, err.Error())
 				return
@@ -72,7 +72,7 @@ func main() {
 					return
 				}
 			}
-			ctx.JSON(http.StatusOK, descriptor)
+			ctx.JSON(http.StatusOK, source)
 		}
 	})
 

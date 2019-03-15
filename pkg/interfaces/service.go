@@ -9,7 +9,7 @@ type Service interface {
 	Cache() Cache
 
 	Running() bool
-
+	HookShutDown(func())
 	//Configuration
 	Config(path string, defaultValue interface{}) interface{}
 

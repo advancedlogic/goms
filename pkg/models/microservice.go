@@ -203,15 +203,14 @@ func (mb *MicroserviceBuilder) WithPlugin(processor interfaces.Processor) *Micro
 	return mb
 }
 
-func (m *Microservice) Run() {
-	defer m.Close()
+func (m *Microservice) HookShutDown(fn func()) {
+	go_shutdown_hook.ADD(fn)
+}
 
+func (m *Microservice) Run() {
 	go_shutdown_hook.ADD(func() {
-		m.Info("Goodbye and thanks for all the fish")
-		err := m.transport.Stop()
-		if err != nil {
-			m.Fatal(err.Error())
-		}
+		m.Close()
+		m.Warn("Goodbye and thanks for all the fish")
 	})
 
 	if m.discovery != nil {
@@ -252,17 +251,22 @@ func (m *Microservice) Running() bool {
 
 func (m *Microservice) Close() {
 	m.running = false
+	time.Sleep(3000)
+	m.Warn("Initialized Service Shutdown")
+
 	if m.broker != nil {
 		m.broker.Close()
 	}
-	if m.transport != nil {
-		if err := m.transport.Stop(); err != nil {
-			m.Fatal(err.Error())
-		}
-	}
+
 	if m.module != nil {
 		if err := m.module.Close(); err != nil {
-			m.Fatal(err.Error())
+			m.Error(err.Error())
+		}
+	}
+
+	if m.transport != nil {
+		if err := m.transport.Stop(); err != nil {
+			m.Error(err.Error())
 		}
 	}
 }
