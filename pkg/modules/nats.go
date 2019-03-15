@@ -3,6 +3,7 @@ package modules
 import (
 	"errors"
 	"fmt"
+	"github.com/advancedlogic/goms/pkg/models"
 	"github.com/nats-io/go-nats"
 	"github.com/sirupsen/logrus"
 )
@@ -19,12 +20,12 @@ type Nats struct {
 }
 
 type NatsBuilder struct {
-	*Environment
+	*models.Environment
 	*Nats
-	Exception
+	models.Exception
 }
 
-func NewNatsBuilder(environment *Environment) *NatsBuilder {
+func NewNatsBuilder(environment *models.Environment) *NatsBuilder {
 	nb := &NatsBuilder{
 		Environment: environment,
 		Nats: &Nats{
@@ -53,7 +54,7 @@ func (nb *NatsBuilder) WithUserCredentialsPath(path string) *NatsBuilder {
 }
 
 func (nb *NatsBuilder) Build() (*Nats, error) {
-	err := nb.CheckErrors(nb.errors)
+	err := nb.CheckErrors(nb.Errors())
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +71,8 @@ func (n *Nats) Connect() error {
 
 }
 
-func (n *Nats) Publish(topic string, message []byte) error {
-	return n.conn.Publish(topic, message)
+func (n *Nats) Publish(topic string, message interface{}) error {
+	return n.conn.Publish(topic, message.([]byte))
 }
 
 func (n *Nats) Subscribe(topic string, handler nats.MsgHandler) error {

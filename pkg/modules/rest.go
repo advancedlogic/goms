@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/advancedlogic/goms/pkg/models"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/toorop/gin-logrus"
@@ -32,12 +33,12 @@ type Rest struct {
 
 // Rest builder
 type RestBuilder struct {
-	*Environment
+	*models.Environment
 	*Rest
-	Exception
+	models.Exception
 }
 
-func NewRestBuilder(environment *Environment) *RestBuilder {
+func NewRestBuilder(environment *models.Environment) *RestBuilder {
 	rb := &RestBuilder{
 		Environment: environment,
 		Rest: &Rest{
@@ -57,7 +58,8 @@ func NewRestBuilder(environment *Environment) *RestBuilder {
 	return rb.
 		WithPort(environment.GetIntOrDefault("service.port", 8080)).
 		WithReadTimeout(environment.GetDurationOrDefault("service.timeout", 10*time.Second)).
-		WithWriteTimeout(environment.GetDurationOrDefault("service.timeout", 10*time.Second))
+		WithWriteTimeout(environment.GetDurationOrDefault("service.timeout", 10*time.Second)).
+		WithStaticFilesFolder("/static", environment.GetStringOrDefault("service.public", ""))
 
 }
 
@@ -135,7 +137,9 @@ func (rb *RestBuilder) WithMiddleware(middleware func(ctx *gin.Context)) *RestBu
 }
 
 func (rb *RestBuilder) WithStaticFilesFolder(uri, folder string) *RestBuilder {
-	rb.websiteFolder[uri] = folder
+	if uri != "" && folder != "" {
+		rb.websiteFolder[uri] = folder
+	}
 	return rb
 }
 
@@ -153,7 +157,7 @@ func (rb *RestBuilder) Build() (*Rest, error) {
 	if ginMode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	if err := rb.CheckErrors(rb.errors); err != nil {
+	if err := rb.CheckErrors(rb.Errors()); err != nil {
 		return nil, err
 	}
 	if rb.Rest != nil {
@@ -188,6 +192,17 @@ func (r *Rest) DeleteHandler(endpoint string, handler interface{}) {
 		r.deleteHandlers[endpoint] = make([]gin.HandlerFunc, 0)
 	}
 	r.deleteHandlers[endpoint] = append(r.deleteHandlers[endpoint], gin.HandlerFunc(handler.(func(ctx *gin.Context))))
+}
+
+func (r *Rest) Middleware(middleware interface{}) {
+	if r.middleware == nil {
+		r.middleware = make([]func(*gin.Context), 0)
+	}
+	r.middleware = append(r.middleware, middleware.(func(ctx *gin.Context)))
+}
+
+func (r *Rest) StaticFilesFolder(uri, folder string) {
+	r.websiteFolder[uri] = folder
 }
 
 func (r *Rest) Run() error {

@@ -1,5 +1,7 @@
 package interfaces
 
 type Processor interface {
-	Process(interface{}) error
+	Init(service Service) error
+	Close() error
+	Process(interface{}) (interface{}, error)
 }

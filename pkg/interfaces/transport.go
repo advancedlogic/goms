@@ -7,4 +7,6 @@ type Transport interface {
 	PostHandler(string, interface{})
 	PutHandler(string, interface{})
 	DeleteHandler(string, interface{})
+	Middleware(interface{})
+	StaticFilesFolder(string, string)
 }

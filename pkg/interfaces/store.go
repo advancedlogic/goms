@@ -5,4 +5,5 @@ type Store interface {
 	Read(string) (interface{}, error)
 	Update(string, interface{}) error
 	Delete(string) error
+	List() ([]interface{}, error)
 }

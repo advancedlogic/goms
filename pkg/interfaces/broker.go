@@ -6,7 +6,7 @@ type Broker interface {
 	Run() error
 	Endpoint() string
 	Connect() error
-	Publish(string, []byte) error
+	Publish(string, interface{}) error
 	Subscribe(string, nats.MsgHandler) error
 	Unsubscribe(string) error
 	Close()

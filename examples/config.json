@@ -5,12 +5,18 @@
   },
   "service" : {
     "port" : 8080,
-    "mode" : "debug"
+    "mode" : "debug",
+    "public" : "./www"
   },
   "store" : {
-    "bucket" : "test",
-    "endpoint" : "127.0.0.1:9000 ",
-    "accessKey" : "UHW54GE01Z47THBOLC4X",
-    "secretKey" : "AIARE2SWHObFErWHQ5HXrxJaPXSJ6ypgpmwF4Gkg"
+    "location": "default",
+    "bucket": "test",
+    "endpoint": "127.0.0.1:9000",
+    "accessKey": "9A9O3FQINRD2D6V0JTQ0",
+    "secretKey": "nNmLmjrXJqVeZNUAUTN5UInauiCOz+HhYUFcmMpq"
+  },
+  "rss" : {
+    "folder" : "./sources",
+    "loop" : "1h"
   }
 }

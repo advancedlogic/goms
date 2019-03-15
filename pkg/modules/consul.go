@@ -2,7 +2,7 @@ package modules
 
 import (
 	"fmt"
-	. "github.com/advancedlogic/goms/pkg/models"
+	"github.com/advancedlogic/goms/pkg/models"
 	consulapi "github.com/hashicorp/consul/api"
 	"log"
 	"os"
@@ -15,12 +15,12 @@ type ConsulRegistry struct {
 }
 
 type ConsulRegistryBuilder struct {
-	*Environment
+	*models.Environment
 	*ConsulRegistry
-	Exception
+	models.Exception
 }
 
-func NewConsulRegistryBuilder(environment *Environment) *ConsulRegistryBuilder {
+func NewConsulRegistryBuilder(environment *models.Environment) *ConsulRegistryBuilder {
 	crb := &ConsulRegistryBuilder{
 		ConsulRegistry: &ConsulRegistry{},
 		Environment:    environment,
@@ -55,7 +55,7 @@ func (crb *ConsulRegistryBuilder) WithHealthCheckingPort(port int) *ConsulRegist
 }
 
 func (crb *ConsulRegistryBuilder) Build() (*ConsulRegistry, error) {
-	if err := crb.CheckErrors(crb.errors); err != nil {
+	if err := crb.CheckErrors(crb.Errors()); err != nil {
 		return nil, err
 	}
 

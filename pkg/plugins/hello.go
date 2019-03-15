@@ -3,9 +3,11 @@ package plugins
 import (
 	"errors"
 	"fmt"
+	"github.com/advancedlogic/goms/pkg/interfaces"
 )
 
 type Hello struct {
+	interfaces.Service
 	Name string
 }
 
@@ -15,12 +17,18 @@ func NewHello(name string) *Hello {
 	}
 }
 
-func (h *Hello) Process(descriptor interface{}) error {
+func (r *Hello) Init(service interfaces.Service) error {
+	r.Service = service
+	return nil
+}
+func (r *Hello) Close() error { return nil }
+
+func (h *Hello) Process(descriptor interface{}) (interface{}, error) {
 	switch descriptor.(type) {
 	case string:
 		fmt.Printf("Hello %s -> %s", h.Name, descriptor.(string))
 	default:
-		return errors.New("argument must be a string")
+		return nil, errors.New("argument must be a string")
 	}
-	return nil
+	return "hello", nil
 }
