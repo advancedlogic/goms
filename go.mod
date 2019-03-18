@@ -5,6 +5,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.5.0 // indirect
 	github.com/advancedlogic/GoOse v0.0.0-20180825110909-6cd46faf50eb
 	github.com/ankit-arora/go-utils v0.0.0-20170709111640-7f375a7a7b81
+	github.com/appleboy/gin-jwt v2.5.0+incompatible // indirect
 	github.com/araddon/dateparse v0.0.0-20190223010137-262228af701e // indirect
 	github.com/fatih/set v0.2.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
@@ -19,6 +20,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.0 // indirect
 	github.com/hashicorp/serf v0.8.2 // indirect
 	github.com/jaytaylor/html2text v0.0.0-20190311042500-a93a6c6ea053 // indirect
+	github.com/markbates/goth v1.49.0 // indirect
 	github.com/mattn/go-colorable v0.1.1 // indirect
 	github.com/mattn/go-isatty v0.0.6 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
@@ -33,13 +35,19 @@ require (
 	github.com/olekukonko/tablewriter v0.0.1 // indirect
 	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.4.3 // indirect
+	github.com/pjebs/jsonerror v0.0.0-20170716024348-7cbf8512c7fb // indirect
+	github.com/pjebs/restgate v0.0.0-20170705024428-23fa04ff258d // indirect
+	github.com/prometheus/client_golang v0.9.2 // indirect
 	github.com/sirupsen/logrus v1.3.0
 	github.com/spf13/viper v1.3.1
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/toorop/gin-logrus v0.0.0-20180629064933-5d05462a6ed8
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
+	github.com/zsais/go-gin-prometheus v0.0.0-20181030200533-58963fb32f54
 	golang.org/x/net v0.0.0-20181201002055-351d144fa1fc
 	golang.org/x/text v0.3.0
+	gopkg.in/dgrijalva/jwt-go.v3 v3.2.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
+	gopkg.in/unrolled/render.v1 v1.0.0 // indirect
 )

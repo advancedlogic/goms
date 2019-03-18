@@ -99,7 +99,7 @@ func DefaultS(builder *models.MicroserviceBuilder, modules ...string) {
 	}
 }
 
-func DefaultBuilder(name string, modules ...string) *models.MicroserviceBuilder {
+func DefaultMicroserviceBuilder(name string, modules ...string) *models.MicroserviceBuilder {
 	environment, err := models.
 		NewEnvironmentBuilder().
 		WithConfigurationFile("config").

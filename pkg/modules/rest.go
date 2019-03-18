@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/toorop/gin-logrus"
+	"github.com/zsais/go-gin-prometheus"
 	"net/http"
 	"time"
 )
@@ -210,6 +211,9 @@ func (r *Rest) Run() error {
 	router.GET("/healthcheck", func(c *gin.Context) {
 		c.String(200, "product service is good")
 	})
+
+	p := ginprometheus.NewPrometheus("gin")
+	p.Use(router)
 
 	for _, middleware := range r.middleware {
 		router.Use(gin.HandlerFunc(middleware))
